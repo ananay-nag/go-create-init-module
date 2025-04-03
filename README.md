@@ -1,4 +1,4 @@
-# set-mod 🚀  
+# go-set-mod 🚀  
 
 A simple yet powerful CLI tool to automate Go module initialization based on project structure.  
 It ensures correct module naming using a predefined **GitHub namespace** and **relative paths** from the project root.  
@@ -19,7 +19,7 @@ It ensures correct module naming using a predefined **GitHub namespace** and **r
 You can install `go-set-mod` easily using a one-liner:  
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/ananay-nag/go-create-init-module/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ananay-nag/go-create-init-module/refs/heads/main/install.sh | bash
 ```
 ---
 ## 📂Project Structure
