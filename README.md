@@ -48,6 +48,8 @@ my-project/
 ---
 ## 🚀 CLI Usage
 
+## 1️⃣ Initialize a Go module inside a new subdirectory
+
 - Run inside any subdirectory:
 ```sh
     go-set-mod <module-name>
@@ -56,11 +58,31 @@ my-project/
 ```sh
     go-set-mod my-sub-sub-module
 ```
+
+# 2️⃣ Initialize a Go module in the current directory (-c)
+```sh
+    set-mod -c
+```
+- Uses the current directory name for go mod init.
+- Does not create a new subdirectory.
+```sh
+    cd my-sub-module
+    set-mod -c
+```
+
 - Generates:
 ```sh
     go mod init github.com/your-username/my-module/my-sub-module/my-sub-sub-module
 ```
 ---
+
+## 📌 Features Summary
+| Feature                                             | Command                     | Behavior                                                                      |
+|-----------------------------------------------------|-----------------------------|-------------------------------------------------------------------------------|
+| Initialize a module in a new subdirectory           | `go-set-mod my-module`         | Creates a new folder and runs `go mod init` inside it.                        |
+| Initialize the current directory as a module        | `go-set-mod -c`                | Runs `go mod init` in current directory, no new folder created.               |
+| Customizable module path prefix                     | `mod-name.yaml`             | Uses pre-set value to generate module paths.                                  |
+
 ## 🛠 How It Works
 - 1️⃣ Detects Project Root – Searches for config.yaml in parent directories.
 - 2️⃣ Computes Relative Path – Finds the path from root to the current directory.
