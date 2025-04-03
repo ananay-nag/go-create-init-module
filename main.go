@@ -16,7 +16,7 @@ type Config struct {
 	PreSet string `yaml:"pre-set"`
 }
 
-// LoadConfig searches for config.yaml in parent directories
+// LoadConfig searches for mod-name.yaml in parent directories
 func LoadConfig() (Config, string, error) {
 	var config Config
 
@@ -50,12 +50,25 @@ func LoadConfig() (Config, string, error) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go-set-mod <module-name>")
+		fmt.Println("Usage: set-mod <module-name> or set-mod -c")
 		os.Exit(1)
 	}
 
-	moduleName := os.Args[1]
+	var moduleName string
 
+	// Check for "-c" flag
+	if os.Args[1] == "-c" {
+		// Get the current directory name
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("Error getting current directory: %v", err)
+		}
+		moduleName = filepath.Base(cwd) // Use the current directory name
+	} else {
+		moduleName = os.Args[1]
+	}
+
+	// Load config and project root
 	config, projectRoot, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading mod-name.yaml: %v", err)
@@ -77,7 +90,7 @@ func main() {
 		log.Fatalf("Error computing relative path: %v", err)
 	}
 
-	// Clean up relative path to remove "." and "./"
+	// Clean up relative path
 	relativePath = strings.TrimPrefix(relativePath, "./")
 	relativePath = strings.TrimPrefix(relativePath, ".")
 
