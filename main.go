@@ -50,25 +50,10 @@ func LoadConfig() (Config, string, error) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: set-mod <module-name> or set-mod -c")
+		fmt.Println("Usage: set-mod <module-name> or set-mod -c to init in current dir")
 		os.Exit(1)
 	}
 
-	var moduleName string
-
-	// Check for "-c" flag
-	if os.Args[1] == "-c" {
-		// Get the current directory name
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("Error getting current directory: %v", err)
-		}
-		moduleName = filepath.Base(cwd) // Use the current directory name
-	} else {
-		moduleName = os.Args[1]
-	}
-
-	// Load config and project root
 	config, projectRoot, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading mod-name.yaml: %v", err)
@@ -94,8 +79,24 @@ func main() {
 	relativePath = strings.TrimPrefix(relativePath, "./")
 	relativePath = strings.TrimPrefix(relativePath, ".")
 
-	// Construct module path
-	modulePath := fmt.Sprintf("%s/%s/%s", config.PreSet, relativePath, moduleName)
+	// Determine module path
+	var modulePath string
+
+	if os.Args[1] == "-c" {
+		// Use the current directory name directly
+		modulePath = fmt.Sprintf("%s/%s", config.PreSet, relativePath)
+	} else {
+		moduleName := os.Args[1]
+		modulePath = fmt.Sprintf("%s/%s/%s", config.PreSet, relativePath, moduleName)
+
+		// Ensure module directory exists (only for named modules)
+		if err := os.MkdirAll(filepath.Join(cwd, moduleName), os.ModePerm); err != nil {
+			log.Fatalf("Error creating module directory: %v", err)
+		}
+
+		// Change working directory to the new module
+		cwd = filepath.Join(cwd, moduleName)
+	}
 
 	// Remove unnecessary slashes
 	modulePath = strings.TrimRight(modulePath, "/")
@@ -107,14 +108,9 @@ func main() {
 
 	// Run `go mod init`
 	cmd := exec.Command("go", "mod", "init", modulePath)
-	cmd.Dir = filepath.Join(cwd, moduleName) // Create in subdirectory
+	cmd.Dir = cwd // Use the correct working directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	// Create module directory
-	if err := os.MkdirAll(filepath.Join(cwd, moduleName), os.ModePerm); err != nil {
-		log.Fatalf("Error creating module directory: %v", err)
-	}
 
 	fmt.Printf("Initializing Go module at %s\n", modulePath)
 	if err := cmd.Run(); err != nil {
