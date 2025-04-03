@@ -61,13 +61,13 @@ my-project/
 
 # 2️⃣ Initialize a Go module in the current directory (-c)
 ```sh
-    set-mod -c
+    go-set-mod -c
 ```
 - Uses the current directory name for go mod init.
 - Does not create a new subdirectory.
 ```sh
     cd my-sub-module
-    set-mod -c
+    go-set-mod -c
 ```
 
 - Generates:
