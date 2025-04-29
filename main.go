@@ -84,7 +84,8 @@ func main() {
 
 	if os.Args[1] == "-c" {
 		// Use the current directory name directly
-		modulePath = fmt.Sprintf("%s/%s", config.PreSet, relativePath)
+		currentDirName := filepath.Base(cwd)
+    		modulePath = fmt.Sprintf("%s/%s", config.PreSet, currentDirName)
 	} else {
 		moduleName := os.Args[1]
 		modulePath = fmt.Sprintf("%s/%s/%s", config.PreSet, relativePath, moduleName)
