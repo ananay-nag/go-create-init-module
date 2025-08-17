@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -29,6 +30,7 @@ func LoadConfig() (Config, string, error) {
 	for {
 		configPath := filepath.Join(currentDir, "mod-name.yaml")
 		if _, err := os.Stat(configPath); err == nil {
+			// File found, read and unmarshal it
 			file, err := os.ReadFile(configPath)
 			if err != nil {
 				return config, "", err
@@ -54,9 +56,52 @@ func main() {
 		os.Exit(1)
 	}
 
-	config, projectRoot, err := LoadConfig()
+	var config Config
+	var projectRoot string
+	var err error
+
+	// Try to load the config from an existing file
+	config, projectRoot, err = LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading mod-name.yaml: %v", err)
+		// If the file is not found, create a new one in the current directory
+		if strings.Contains(err.Error(), "mod-name.yaml not found") {
+			cwd, createErr := os.Getwd()
+			if createErr != nil {
+				log.Fatalf("Error getting current directory to create config: %v", createErr)
+			}
+			configPath := filepath.Join(cwd, "mod-name.yaml")
+			defaultPreSet := "github.com/your-username"
+
+			fmt.Printf("mod-name.yaml not found. Creating a new one at %s\n", configPath)
+			fmt.Printf("Please enter a value for 'pre-set' (default: %s): ", defaultPreSet)
+
+			// Read user input
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			userInput := strings.TrimSpace(input)
+
+			// Use user input if it's not empty, otherwise use the default
+			preSetValue := defaultPreSet
+			if userInput != "" {
+				preSetValue = userInput
+			}
+
+			defaultContent := []byte(fmt.Sprintf(`pre-set: "%s"`, preSetValue))
+
+			if writeErr := os.WriteFile(configPath, defaultContent, 0644); writeErr != nil {
+				log.Fatalf("Error creating mod-name.yaml: %v", writeErr)
+			}
+
+			// Now that the file is created, try loading the config again
+			config, projectRoot, err = LoadConfig()
+			if err != nil {
+				// This should not happen, but we handle it just in case
+				log.Fatalf("Error loading newly created mod-name.yaml: %v", err)
+			}
+		} else {
+			// Handle other types of errors from LoadConfig
+			log.Fatalf("Error loading mod-name.yaml: %v", err)
+		}
 	}
 
 	if config.PreSet == "" {

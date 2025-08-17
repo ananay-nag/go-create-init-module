@@ -59,10 +59,11 @@ my-project/
     go-set-mod my-sub-sub-module
 ```
 
-# 2️⃣ Initialize a Go module in the current directory (-c)
+## 2️⃣ Initialize a Go module in the current directory (-c)
 ```sh
     go-set-mod -c
 ```
+- Create a default mod-name.yaml if not exist, You need to update pre-set:
 - Uses the current directory name for go mod init.
 - Does not create a new subdirectory.
 ```sh
@@ -79,9 +80,10 @@ my-project/
 ## 📌 Features Summary
 | Feature                                             | Command                     | Behavior                                                                      |
 |-----------------------------------------------------|-----------------------------|-------------------------------------------------------------------------------|
-| Initialize a module in a new subdirectory           | `go-set-mod my-module`         | Creates a new folder and runs `go mod init` inside it.                        |
-| Initialize the current directory as a module        | `go-set-mod -c`                | Runs `go mod init` in current directory, no new folder created.               |
+| Initialize a module in a new subdirectory           | `go-set-mod my-module`      | Creates a new folder and runs `go mod init` inside it.                        |
+| Initialize the current directory as a module        | `go-set-mod -c`             | Runs `go mod init` in current directory, no new folder created.               |
 | Customizable module path prefix                     | `mod-name.yaml`             | Uses pre-set value to generate module paths.                                  |
+| Create a default mod-name.yaml if not exist         | `mod-name.yaml`             | Create a default mod-name.yaml if not exist                                   |
 
 ## 🛠 How It Works
 - 1️⃣ Detects Project Root – Searches for config.yaml in parent directories.
