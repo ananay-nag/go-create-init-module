@@ -50,12 +50,101 @@ func LoadConfig() (Config, string, error) {
 	return config, "", fmt.Errorf("mod-name.yaml not found")
 }
 
+// handleMissingConfig handles the logic for creating a new mod-name.yaml file
+// when one is not found in the current or parent directories.
+func handleMissingConfig() (Config, string, error) {
+	cwd, createErr := os.Getwd()
+	if createErr != nil {
+		log.Fatalf("Error getting current directory to create config: %v", createErr)
+	}
+	configPath := filepath.Join(cwd, "mod-name.yaml")
+	defaultPreSet := "github.com/your-username"
+
+	fmt.Printf("mod-name.yaml not found. Creating a new one at %s\n", configPath)
+	fmt.Printf("Please enter a value for 'pre-set' (default: %s): ", defaultPreSet)
+
+	// Read user input
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	userInput := strings.TrimSpace(input)
+
+	// Use user input if it's not empty, otherwise use the default
+	preSetValue := defaultPreSet
+	if userInput != "" {
+		preSetValue = userInput
+	}
+
+	defaultContent := []byte(fmt.Sprintf(`pre-set: "%s"`, preSetValue))
+
+	if writeErr := os.WriteFile(configPath, defaultContent, 0644); writeErr != nil {
+		log.Fatalf("Error creating mod-name.yaml: %v", writeErr)
+	}
+
+	// Now that the file is created, try loading the config again
+	config, projectRoot, err := LoadConfig()
+	if err != nil {
+		// This should not happen, but we handle it just in case
+		log.Fatalf("Error loading newly created mod-name.yaml: %v", err)
+	}
+
+	return config, projectRoot, nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: set-mod <module-name> or set-mod -c to init in current dir")
+		fmt.Println("Or:    set-mod -i <module-name> to create and init a new app")
 		os.Exit(1)
 	}
 
+	// Handle the new -i flag to create and initialize a new application directory
+	if os.Args[1] == "-i" {
+		if len(os.Args) < 3 {
+			fmt.Println("Error: Missing <module-name> for -i flag")
+			os.Exit(1)
+		}
+
+		appName := os.Args[2]
+
+		// Check if the directory already exists
+		if _, err := os.Stat(appName); !os.IsNotExist(err) {
+			fmt.Printf("Error: Directory '%s' already exists. Use 'go-set-mod -c' to initialize inside it.\n", appName)
+			os.Exit(1)
+		}
+
+		// Create the new application directory
+		if err := os.MkdirAll(appName, 0755); err != nil {
+			log.Fatalf("Error creating directory '%s': %v", appName, err)
+		}
+
+		// Change working directory to the new app directory
+		if err := os.Chdir(appName); err != nil {
+			log.Fatalf("Error changing to directory '%s': %v", appName, err)
+		}
+
+		// Handle missing config and get values
+		config, projectRoot, err := handleMissingConfig()
+		if err != nil {
+			log.Fatalf("Error handling new config creation: %v", err)
+		}
+		
+		// Run go mod init
+		modulePath := filepath.ToSlash(filepath.Join(config.PreSet, filepath.Base(projectRoot)))
+		cmd := exec.Command("go", "mod", "init", modulePath)
+		cmd.Dir = projectRoot
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		fmt.Printf("Initializing Go module at %s\n", modulePath)
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("Error running 'go mod init': %v", err)
+		}
+
+		fmt.Println("Go module initialized successfully!")
+		return
+	}
+
+	// Existing logic for -c and <module-name>
 	var config Config
 	var projectRoot string
 	var err error
@@ -63,40 +152,11 @@ func main() {
 	// Try to load the config from an existing file
 	config, projectRoot, err = LoadConfig()
 	if err != nil {
-		// If the file is not found, create a new one in the current directory
+		// If the file is not found, handle it using the new function
 		if strings.Contains(err.Error(), "mod-name.yaml not found") {
-			cwd, createErr := os.Getwd()
-			if createErr != nil {
-				log.Fatalf("Error getting current directory to create config: %v", createErr)
-			}
-			configPath := filepath.Join(cwd, "mod-name.yaml")
-			defaultPreSet := "github.com/your-username"
-
-			fmt.Printf("mod-name.yaml not found. Creating a new one at %s\n", configPath)
-			fmt.Printf("Please enter a value for 'pre-set' (default: %s): ", defaultPreSet)
-
-			// Read user input
-			reader := bufio.NewReader(os.Stdin)
-			input, _ := reader.ReadString('\n')
-			userInput := strings.TrimSpace(input)
-
-			// Use user input if it's not empty, otherwise use the default
-			preSetValue := defaultPreSet
-			if userInput != "" {
-				preSetValue = userInput
-			}
-
-			defaultContent := []byte(fmt.Sprintf(`pre-set: "%s"`, preSetValue))
-
-			if writeErr := os.WriteFile(configPath, defaultContent, 0644); writeErr != nil {
-				log.Fatalf("Error creating mod-name.yaml: %v", writeErr)
-			}
-
-			// Now that the file is created, try loading the config again
-			config, projectRoot, err = LoadConfig()
+			config, projectRoot, err = handleMissingConfig()
 			if err != nil {
-				// This should not happen, but we handle it just in case
-				log.Fatalf("Error loading newly created mod-name.yaml: %v", err)
+				log.Fatalf("Error handling new config creation: %v", err)
 			}
 		} else {
 			// Handle other types of errors from LoadConfig
