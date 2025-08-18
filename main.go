@@ -114,47 +114,43 @@ func main() {
 		log.Fatalf("Error getting current directory: %v", err)
 	}
 
+	// Get the project name from the root directory
+	projectName := filepath.Base(projectRoot)
+
 	// Compute relative path from project root to cwd
-	relativePath, err := filepath.Rel(projectRoot, cwd)
+	relPath, err := filepath.Rel(projectRoot, cwd)
 	if err != nil {
 		log.Fatalf("Error computing relative path: %v", err)
 	}
 
-	// Clean up relative path
-	relativePath = strings.TrimPrefix(relativePath, "./")
-	relativePath = strings.TrimPrefix(relativePath, ".")
-
-	// Determine module path
-	var modulePath string
-
-	if os.Args[1] == "-c" {
-		// Use the current directory name directly
-		currentDirName := filepath.Base(cwd)
-    		modulePath = fmt.Sprintf("%s/%s", config.PreSet, currentDirName)
-	} else {
-		moduleName := os.Args[1]
-		modulePath = fmt.Sprintf("%s/%s/%s", config.PreSet, relativePath, moduleName)
-
-		// Ensure module directory exists (only for named modules)
-		if err := os.MkdirAll(filepath.Join(cwd, moduleName), os.ModePerm); err != nil {
-			log.Fatalf("Error creating module directory: %v", err)
-		}
-
-		// Change working directory to the new module
-		cwd = filepath.Join(cwd, moduleName)
+	// Construct the final module path. This method is more robust.
+	modulePath := filepath.ToSlash(filepath.Join(config.PreSet, projectName))
+	if relPath != "." && relPath != "" {
+		modulePath = filepath.ToSlash(filepath.Join(modulePath, relPath))
 	}
 
-	// Remove unnecessary slashes
-	modulePath = strings.TrimRight(modulePath, "/")
-	modulePath = strings.ReplaceAll(modulePath, "//", "/")
+	// Determine the final module path based on arguments
+	if os.Args[1] != "-c" {
+		moduleName := os.Args[1]
+		modulePath = filepath.ToSlash(filepath.Join(modulePath, moduleName))
+	}
 
-	// Ensure no leading or trailing slashes
-	modulePath = strings.TrimPrefix(modulePath, "/")
-	modulePath = strings.TrimSuffix(modulePath, "/")
+	// Set the correct working directory for the `go mod init` command
+	var initDir string
+	if os.Args[1] == "-c" {
+		initDir = cwd
+	} else {
+		moduleName := os.Args[1]
+		initDir = filepath.Join(cwd, moduleName)
+		// Ensure module directory exists
+		if err := os.MkdirAll(initDir, os.ModePerm); err != nil {
+			log.Fatalf("Error creating module directory: %v", err)
+		}
+	}
 
 	// Run `go mod init`
 	cmd := exec.Command("go", "mod", "init", modulePath)
-	cmd.Dir = cwd // Use the correct working directory
+	cmd.Dir = initDir // Use the correct working directory
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
